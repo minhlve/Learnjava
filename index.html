@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Console — Sổ tay lệnh &amp; hàm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1117;
+    --panel: #171a24;
+    --panel2: #1d2130;
+    --line: #2a2f42;
+    --text: #e3e6f0;
+    --muted: #8a90a8;
+    --keyword: #e8a33d;
+    --string: #6ec9b0;
+    --accent: #ff6a3d;
+    --accent2: #4fb0ff;
+    --ok: #7ee081;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+  }
+  ::selection{ background: var(--accent); color:#fff; }
+
+  /* top bar mimicking AndroidIDE */
+  .topbar{
+    display:flex; align-items:center; gap:14px;
+    background:#12151f; border-bottom:1px solid var(--line);
+    padding:14px 18px; position:sticky; top:0; z-index:50;
+  }
+  .topbar .dots{ display:flex; gap:5px; }
+  .topbar .dots span{ width:9px; height:9px; border-radius:50%; background:var(--accent); display:block; }
+  .topbar .dots span:nth-child(2){ background:var(--accent2);}
+  .topbar h1{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 15px; font-weight:700; color:var(--text); margin:0;
+    letter-spacing:.3px;
+  }
+  .topbar .path{ color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:12px; }
+  .topbar .run{
+    margin-left:auto; display:flex; align-items:center; gap:8px;
+    color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:12px;
+  }
+  .play{ width:0;height:0; border-top:6px solid transparent; border-bottom:6px solid transparent; border-left:9px solid var(--accent); }
+
+  .search-wrap{ padding: 16px 18px 6px; }
+  .search-wrap input{
+    width:100%; padding:12px 14px; border-radius:10px;
+    background: var(--panel); border:1px solid var(--line); color:var(--text);
+    font-family:'JetBrains Mono', monospace; font-size:14px;
+  }
+  .search-wrap input:focus{ outline:none; border-color:var(--accent); }
+  .search-wrap input::placeholder{ color:var(--muted); }
+
+  .layout{ display:flex; align-items:flex-start; }
+
+  /* sidebar as file tree */
+  .sidebar{
+    width:230px; flex-shrink:0; padding: 10px 8px 60px;
+    position: sticky; top: 64px; max-height: calc(100vh - 64px); overflow-y:auto;
+  }
+  .sidebar .group{ margin-bottom: 4px; }
+  .sidebar a{
+    display:flex; align-items:center; gap:8px;
+    text-decoration:none; color:var(--muted);
+    font-family:'JetBrains Mono', monospace; font-size:12.5px;
+    padding: 7px 10px; border-radius:7px;
+  }
+  .sidebar a:hover{ background: var(--panel); color:var(--text); }
+  .sidebar a .dot{ width:6px;height:6px;border-radius:50%; background:var(--line); flex-shrink:0;}
+  .sidebar a:hover .dot{ background: var(--accent); }
+
+  .main{ flex:1; min-width:0; padding: 6px 18px 80px; }
+
+  .cat-heading{
+    display:flex; align-items:baseline; gap:10px;
+    margin: 34px 0 14px; scroll-margin-top: 80px;
+  }
+  .cat-heading h2{
+    font-family:'JetBrains Mono', monospace; font-size: 19px; font-weight:800;
+    margin:0; color:var(--text);
+  }
+  .cat-heading .count{
+    font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--muted);
+    background: var(--panel); border:1px solid var(--line); padding:2px 8px; border-radius:20px;
+  }
+  .cat-desc{ color:var(--muted); font-size:13.5px; margin: -6px 0 16px; max-width:640px; line-height:1.5;}
+
+  .card{
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    margin-bottom: 16px;
+    overflow:hidden;
+  }
+  .card .tab{
+    display:flex; align-items:center; gap:10px;
+    padding: 10px 14px; background: var(--panel2);
+    border-bottom:1px solid var(--line);
+  }
+  .card .tab .fname{
+    font-family:'JetBrains Mono', monospace; font-weight:700; font-size:13.5px; color: var(--accent2);
+  }
+  .card .tab .fname .kw{ color: var(--keyword); }
+  .card .desc{ padding: 12px 16px 4px; font-size:13.5px; color:#c7cbdb; line-height:1.55; }
+  .card pre{
+    margin:0; padding: 14px 16px; overflow-x:auto;
+    font-family:'JetBrains Mono', monospace; font-size:13px; line-height:1.6;
+  }
+  .card pre .ln{ color:#4a5170; user-select:none; margin-right:14px; }
+  .kw{ color: var(--keyword); }
+  .str{ color: var(--string); }
+  .cm{ color:#6b7189; font-style:italic; }
+  .num{ color:#c98bd9; }
+  .fn{ color:var(--accent2); }
+
+  .out{
+    margin: 0 16px 16px; border-radius:10px;
+    background:#0a0c13; border:1px solid var(--line);
+    padding: 10px 14px;
+  }
+  .out .label{
+    font-family:'JetBrains Mono', monospace; font-size:10.5px; letter-spacing:1px;
+    color: var(--muted); text-transform:uppercase; margin-bottom:6px; display:block;
+  }
+  .out pre{ padding:0; margin:0; color: var(--ok); font-size:13px; white-space:pre-wrap; }
+
+  footer{
+    text-align:center; color:var(--muted); font-family:'JetBrains Mono',monospace;
+    font-size:11.5px; padding: 30px 20px 50px;
+  }
+
+  @media (max-width: 880px){
+    .sidebar{ display:none; }
+    .main{ padding: 6px 14px 60px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="dots"><span></span><span></span></div>
+    <h1>Java Console</h1>
+    <span class="path">/ sổ tay lệnh &amp; hàm</span>
+    <div class="run"><span class="play"></span> Ôn tập</div>
+  </div>
+
+  <div class="search-wrap">
+    <input id="searchInput" type="text" placeholder="Tìm lệnh, hàm, từ khóa... (vd: Scanner, if, ArrayList)">
+  </div>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar"></nav>
+    <main class="main" id="main"></main>
+  </div>
+
+  <footer>tổng hợp để ôn lại kiến thức Java cơ bản — cuộn để xem thêm</footer>
+
+<script>
+const DATA = [
+{ cat:"Kiểu dữ liệu nguyên thủy", desc:"Các kiểu lưu giá trị đơn giản, có sẵn trong Java, không phải object.",
+  items:[
+    { title:"int", d:"Số nguyên (không có phần thập phân).",
+      code:`<span class="kw">int</span> tuoi = <span class="num">18</span>;
+System.out.println(tuoi);`, out:`18` },
+    { title:"double", d:"Số thực (có phần thập phân), dùng cho tính toán giá tiền, %.",
+      code:`<span class="kw">double</span> gia = <span class="num">5000.0</span>;
+<span class="kw">double</span> giam = gia * <span class="num">0.4</span>;
+System.out.println(gia - giam);`, out:`3000.0` },
+    { title:"boolean", d:"Chỉ có 2 giá trị: true hoặc false, dùng cho điều kiện.",
+      code:`<span class="kw">boolean</span> daMua = <span class="kw">true</span>;
+<span class="kw">if</span> (daMua) {
+    System.out.println(<span class="str">"Cảm ơn bạn!"</span>);
+}`, out:`Cảm ơn bạn!` },
+    { title:"char", d:"Lưu đúng 1 ký tự, luôn để trong dấu nháy đơn ' '.",
+      code:`<span class="kw">char</span> hangHoa = <span class="str">'A'</span>;
+System.out.println(hangHoa);`, out:`A` },
+    { title:"long / short / byte", d:"Cùng họ số nguyên với int, khác nhau ở giới hạn giá trị lưu được.",
+      code:`<span class="kw">long</span> danSo = <span class="num">8000000000L</span>;
+<span class="kw">byte</span> soLuong = <span class="num">12</span>;
+System.out.println(danSo + <span class="str">" | "</span> + soLuong);`, out:`8000000000 | 12` },
+  ]},
+
+{ cat:"String &amp; các hàm chuỗi", desc:"String không phải kiểu nguyên thủy — nó là object, có sẵn nhiều hàm xử lý.",
+  items:[
+    { title:"String (khai báo)", d:"Chuỗi ký tự, luôn để trong dấu nháy kép \" \".",
+      code:`<span class="kw">String</span> ten = <span class="str">"Hàng 1"</span>;
+System.out.println(ten);`, out:`Hàng 1` },
+    { title:".equals()", d:"So sánh 2 chuỗi có giống nhau không (phân biệt hoa/thường). Không dùng == để so sánh String.",
+      code:`<span class="kw">String</span> answer = <span class="str">"hàng 1"</span>;
+System.out.println(answer.equals(<span class="str">"hàng 1"</span>));`, out:`true` },
+    { title:".equalsIgnoreCase()", d:"Giống equals() nhưng không phân biệt chữ hoa/thường.",
+      code:`<span class="kw">String</span> answer = <span class="str">"HÀNG 1"</span>;
+System.out.println(answer.equalsIgnoreCase(<span class="str">"hàng 1"</span>));`, out:`true` },
+    { title:".trim()", d:"Xóa khoảng trắng thừa ở đầu và cuối chuỗi.",
+      code:`<span class="kw">String</span> s = <span class="str">"  hàng 1  "</span>;
+System.out.println(s.trim());`, out:`hàng 1` },
+    { title:".toLowerCase() / .toUpperCase()", d:"Đổi chuỗi thành chữ thường / chữ hoa toàn bộ.",
+      code:`System.out.println(<span class="str">"HÀNG"</span>.toLowerCase());
+System.out.println(<span class="str">"hàng"</span>.toUpperCase());`, out:`hàng
+HÀNG` },
+    { title:".length()", d:"Trả về số ký tự trong chuỗi.",
+      code:`<span class="kw">String</span> s = <span class="str">"Xin chào"</span>;
+System.out.println(s.length());`, out:`8` },
+    { title:".substring()", d:"Cắt lấy 1 đoạn của chuỗi theo vị trí (bắt đầu từ 0).",
+      code:`<span class="kw">String</span> s = <span class="str">"Hàng 1 giá rẻ"</span>;
+System.out.println(s.substring(<span class="num">0</span>, <span class="num">6</span>));`, out:`Hàng 1` },
+    { title:".contains()", d:"Kiểm tra chuỗi có chứa 1 đoạn text khác hay không.",
+      code:`<span class="kw">String</span> s = <span class="str">"giảm giá 40%"</span>;
+System.out.println(s.contains(<span class="str">"40"</span>));`, out:`true` },
+  ]},
+
+{ cat:"Nhập / Xuất dữ liệu", desc:"Đọc dữ liệu người dùng nhập vào (input) và in kết quả ra màn hình (output).",
+  items:[
+    { title:"Scanner (khởi tạo)", d:"Tạo đối tượng để đọc dữ liệu nhập từ bàn phím. Cần import java.util.Scanner trước.",
+      code:`<span class="kw">import</span> java.util.Scanner;
+Scanner sc = <span class="kw">new</span> Scanner(System.in);`, out:`(chưa in gì, chỉ khởi tạo)` },
+    { title:"sc.nextLine()", d:"Đọc 1 dòng chữ (String) người dùng gõ vào.",
+      code:`System.out.print(<span class="str">"Nhập tên: "</span>);
+<span class="kw">String</span> ten = sc.nextLine();
+System.out.println(<span class="str">"Xin chào "</span> + ten);`, out:`Nhập tên: An
+Xin chào An` },
+    { title:"sc.nextInt()", d:"Đọc 1 số nguyên người dùng nhập vào.",
+      code:`System.out.print(<span class="str">"Nhập tuổi: "</span>);
+<span class="kw">int</span> tuoi = sc.nextInt();
+System.out.println(<span class="str">"Bạn "</span> + tuoi + <span class="str">" tuổi"</span>);`, out:`Nhập tuổi: 20
+Bạn 20 tuổi` },
+    { title:"sc.nextDouble()", d:"Đọc 1 số thực (thập phân) người dùng nhập vào.",
+      code:`<span class="kw">double</span> gia = sc.nextDouble();
+System.out.println(gia * <span class="num">2</span>);`, out:`(nhập 5000 → in ra 10000.0)` },
+    { title:"System.out.println()", d:"In ra màn hình và tự động xuống dòng sau đó.",
+      code:`System.out.println(<span class="str">"Dòng 1"</span>);
+System.out.println(<span class="str">"Dòng 2"</span>);`, out:`Dòng 1
+Dòng 2` },
+    { title:"System.out.print()", d:"In ra màn hình nhưng KHÔNG xuống dòng — dòng tiếp theo in nối liền.",
+      code:`System.out.print(<span class="str">"Xin "</span>);
+System.out.print(<span class="str">"chào"</span>);`, out:`Xin chào` },
+    { title:"System.out.printf()", d:"In có định dạng, dùng %s (chuỗi), %d (số nguyên), %.2f (số thực 2 chữ số).",
+      code:`<span class="kw">double</span> gia = <span class="num">3000.5</span>;
+System.out.printf(<span class="str">"Giá: %.2f đ"</span>, gia);`, out:`Giá: 3000.50 đ` },
+  ]},
+
+{ cat:"Toán tử", desc:"Các ký hiệu dùng để tính toán và so sánh giá trị.",
+  items:[
+    { title:"Toán tử số học (+ - * / %)", d:"% là phép chia lấy số dư.",
+      code:`System.out.println(<span class="num">10</span> + <span class="num">5</span>);
+System.out.println(<span class="num">10</span> % <span class="num">3</span>);  <span class="cm">// dư 1</span>`, out:`15
+1` },
+    { title:"Toán tử so sánh (== != &gt; &lt; &gt;= &lt;=)", d:"Trả về boolean (true/false). Lưu ý: so sánh String phải dùng .equals(), không dùng ==.",
+      code:`<span class="kw">int</span> a = <span class="num">5</span>, b = <span class="num">10</span>;
+System.out.println(a &lt; b);
+System.out.println(a == b);`, out:`true
+false` },
+    { title:"Toán tử logic (&amp;&amp; || !)", d:"&amp;&amp; = và (cả 2 đều đúng); || = hoặc (1 trong 2 đúng); ! = phủ định.",
+      code:`<span class="kw">boolean</span> a = <span class="kw">true</span>, b = <span class="kw">false</span>;
+System.out.println(a &amp;&amp; b);
+System.out.println(a || b);
+System.out.println(!a);`, out:`false
+true
+false` },
+  ]},
+
+{ cat:"Câu lệnh điều kiện", desc:"Cho chương trình rẽ nhánh xử lý theo từng trường hợp.",
+  items:[
+    { title:"if / else if / else", d:"Kiểm tra điều kiện theo thứ tự từ trên xuống, gặp đúng thì chạy và dừng.",
+      code:`<span class="kw">String</span> answer = <span class="str">"hàng 2"</span>;
+<span class="kw">if</span> (answer.equals(<span class="str">"hàng 1"</span>)) {
+    System.out.println(<span class="str">"Bạn chọn hàng 1"</span>);
+} <span class="kw">else if</span> (answer.equals(<span class="str">"hàng 2"</span>)) {
+    System.out.println(<span class="str">"Bạn chọn hàng 2"</span>);
+} <span class="kw">else</span> {
+    System.out.println(<span class="str">"Không hợp lệ"</span>);
+}`, out:`Bạn chọn hàng 2` },
+    { title:"switch / case", d:"Rẽ nhánh gọn hơn khi so sánh 1 biến với nhiều giá trị cụ thể.",
+      code:`<span class="kw">int</span> luaChon = <span class="num">2</span>;
+<span class="kw">switch</span> (luaChon) {
+    <span class="kw">case</span> <span class="num">1</span>:
+        System.out.println(<span class="str">"Hàng 1"</span>); <span class="kw">break</span>;
+    <span class="kw">case</span> <span class="num">2</span>:
+        System.out.println(<span class="str">"Hàng 2"</span>); <span class="kw">break</span>;
+    <span class="kw">default</span>:
+        System.out.println(<span class="str">"Không có"</span>);
+}`, out:`Hàng 2` },
+  ]},
+
+{ cat:"Vòng lặp", desc:"Lặp lại 1 đoạn code nhiều lần thay vì viết tay lặp lại.",
+  items:[
+    { title:"for", d:"Dùng khi biết trước số lần lặp.",
+      code:`<span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">1</span>; i &lt;= <span class="num">3</span>; i++) {
+    System.out.println(<span class="str">"Lần "</span> + i);
+}`, out:`Lần 1
+Lần 2
+Lần 3` },
+    { title:"while", d:"Lặp khi còn thỏa điều kiện, không biết trước số lần.",
+      code:`<span class="kw">int</span> i = <span class="num">1</span>;
+<span class="kw">while</span> (i &lt;= <span class="num">3</span>) {
+    System.out.println(<span class="str">"Đếm: "</span> + i);
+    i++;
+}`, out:`Đếm: 1
+Đếm: 2
+Đếm: 3` },
+    { title:"do-while", d:"Giống while nhưng luôn chạy ít nhất 1 lần dù điều kiện sai ngay từ đầu.",
+      code:`<span class="kw">int</span> i = <span class="num">5</span>;
+<span class="kw">do</span> {
+    System.out.println(<span class="str">"Chạy dù i="</span> + i);
+} <span class="kw">while</span> (i &lt; <span class="num">3</span>);`, out:`Chạy dù i=5` },
+    { title:"break / continue", d:"break: thoát vòng lặp ngay lập tức. continue: bỏ qua bước hiện tại, sang bước kế tiếp.",
+      code:`<span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">1</span>; i &lt;= <span class="num">5</span>; i++) {
+    <span class="kw">if</span> (i == <span class="num">3</span>) <span class="kw">continue</span>;
+    <span class="kw">if</span> (i == <span class="num">5</span>) <span class="kw">break</span>;
+    System.out.println(i);
+}`, out:`1
+2
+4` },
+  ]},
+
+{ cat:"Mảng &amp; ArrayList", desc:"Lưu nhiều giá trị cùng lúc trong 1 biến.",
+  items:[
+    { title:"Array (mảng cố định)", d:"Kích thước cố định ngay khi tạo, không thêm/bớt phần tử được.",
+      code:`<span class="kw">String</span>[] hangHoa = {<span class="str">"Hàng 1"</span>, <span class="str">"Hàng 2"</span>};
+System.out.println(hangHoa[<span class="num">0</span>]);
+System.out.println(hangHoa.length);`, out:`Hàng 1
+2` },
+    { title:"ArrayList — khai báo &amp; add()", d:"Danh sách có thể thêm/bớt phần tử tùy ý lúc chạy chương trình.",
+      code:`<span class="kw">import</span> java.util.ArrayList;
+ArrayList&lt;String&gt; list = <span class="kw">new</span> ArrayList&lt;&gt;();
+list.add(<span class="str">"Hàng 1"</span>);
+list.add(<span class="str">"Hàng 2"</span>);
+System.out.println(list);`, out:`[Hàng 1, Hàng 2]` },
+    { title:"ArrayList — get() / remove() / size()", d:"Lấy phần tử theo vị trí, xóa phần tử, đếm số lượng phần tử.",
+      code:`System.out.println(list.get(<span class="num">0</span>));
+list.remove(<span class="num">1</span>);
+System.out.println(list.size());`, out:`Hàng 1
+1` },
+  ]},
+
+{ cat:"HashMap", desc:"Lưu dữ liệu theo cặp key → value, tra cứu nhanh theo key.",
+  items:[
+    { title:"HashMap — put() &amp; get()", d:"put để thêm cặp key-value, get để lấy value theo key.",
+      code:`<span class="kw">import</span> java.util.HashMap;
+HashMap&lt;String, Double&gt; gia = <span class="kw">new</span> HashMap&lt;&gt;();
+gia.put(<span class="str">"Hàng 1"</span>, <span class="num">5000.0</span>);
+gia.put(<span class="str">"Hàng 2"</span>, <span class="num">10000.0</span>);
+System.out.println(gia.get(<span class="str">"Hàng 1"</span>));`, out:`5000.0` },
+    { title:"HashMap — containsKey()", d:"Kiểm tra 1 key có tồn tại trong map hay không.",
+      code:`System.out.println(gia.containsKey(<span class="str">"Hàng 3"</span>));`, out:`false` },
+  ]},
+
+{ cat:"Hàm tự định nghĩa (Method)", desc:"Gói 1 đoạn code lại thành khối có thể gọi lại nhiều lần.",
+  items:[
+    { title:"Hàm không trả giá trị (void)", d:"Chỉ thực hiện hành động (in ra, xử lý...), không trả kết quả về.",
+      code:`<span class="kw">static void</span> chaoMung() {
+    System.out.println(<span class="str">"Chào mừng bạn đến cửa hàng!"</span>);
+}
+<span class="cm">// gọi hàm trong main:</span>
+chaoMung();`, out:`Chào mừng bạn đến cửa hàng!` },
+    { title:"Hàm có trả giá trị (return)", d:"Tính toán và trả kết quả về nơi gọi hàm bằng từ khóa return.",
+      code:`<span class="kw">static double</span> tinhGiaGiam(<span class="kw">double</span> gia, <span class="kw">double</span> phanTramGiam) {
+    <span class="kw">return</span> gia - (gia * (phanTramGiam / <span class="num">100</span>));
+}
+<span class="cm">// gọi hàm:</span>
+System.out.println(tinhGiaGiam(<span class="num">5000</span>, <span class="num">40</span>));`, out:`3000.0` },
+  ]},
+
+{ cat:"Math (thư viện toán)", desc:"Các hàm tính toán có sẵn trong Java, không cần import thêm.",
+  items:[
+    { title:"Math.round()", d:"Làm tròn số thực thành số nguyên gần nhất.",
+      code:`System.out.println(Math.round(<span class="num">3000.6</span>));`, out:`3001` },
+    { title:"Math.max() / Math.min()", d:"Lấy giá trị lớn nhất / nhỏ nhất giữa 2 số.",
+      code:`System.out.println(Math.max(<span class="num">5000</span>, <span class="num">10000</span>));
+System.out.println(Math.min(<span class="num">5000</span>, <span class="num">10000</span>));`, out:`10000
+5000` },
+    { title:"Math.pow() / Math.sqrt()", d:"pow: lũy thừa. sqrt: căn bậc 2.",
+      code:`System.out.println(Math.pow(<span class="num">2</span>, <span class="num">3</span>));
+System.out.println(Math.sqrt(<span class="num">16</span>));`, out:`8.0
+4.0` },
+  ]},
+];
+
+const sidebar = document.getElementById('sidebar');
+const main = document.getElementById('main');
+
+function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-'); }
+
+DATA.forEach(group=>{
+  const gid = slug(group.cat);
+  const navA = document.createElement('a');
+  navA.href = '#'+gid;
+  navA.innerHTML = `<span class="dot"></span>${group.cat}`;
+  sidebar.appendChild(navA);
+
+  const heading = document.createElement('div');
+  heading.className = 'cat-heading';
+  heading.id = gid;
+  heading.innerHTML = `<h2>${group.cat}</h2><span class="count">${group.items.length}</span>`;
+  main.appendChild(heading);
+
+  const descEl = document.createElement('p');
+  descEl.className = 'cat-desc';
+  descEl.textContent = group.desc;
+  main.appendChild(descEl);
+
+  group.items.forEach(item=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.search = (item.title + ' ' + item.d + ' ' + group.cat).toLowerCase();
+    card.innerHTML = `
+      <div class="tab"><span class="fname">${item.title}</span></div>
+      <div class="desc">${item.d}</div>
+      <pre>${item.code}</pre>
+      <div class="out"><span class="label">Output</span><pre>${item.out}</pre></div>
+    `;
+    main.appendChild(card);
+  });
+});
+
+document.getElementById('searchInput').addEventListener('input', (e)=>{
+  const q = e.target.value.toLowerCase().trim();
+  document.querySelectorAll('.card').forEach(card=>{
+    card.style.display = (!q || card.dataset.search.includes(q)) ? '' : 'none';
+  });
+  document.querySelectorAll('.cat-heading').forEach(h=>{
+    let sib = h.nextElementSibling;
+    let anyVisible = false;
+    while(sib && !sib.classList.contains('cat-heading')){
+      if(sib.classList.contains('card') && sib.style.display !== 'none') anyVisible = true;
+      sib = sib.nextElementSibling;
+    }
+    h.style.display = anyVisible || !q ? '' : 'none';
+    h.nextElementSibling.style.display = anyVisible || !q ? '' : 'none';
+  });
+});
+</script>
+</body>
+</html>
